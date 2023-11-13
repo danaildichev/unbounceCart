@@ -1,5 +1,5 @@
 # unbounceCart
-Shopping Cart for Unbounce Landing page
+Shopping Cart for sending customers from an Unbounce landing page to a Checkout Champ URL
 
 Made with Bootstrap and jQuery
 
