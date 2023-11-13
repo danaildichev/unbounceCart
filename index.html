@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Shopping Cart</title>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.1.min.js" integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" integrity="sha512-xh6O/CkQoPOWDdYTDqeRdPCVd1SpvCA9XXcUnZS2FmJNp1coAFzvtCN9BmamE+4aHK8yyUHUSCcJHgXloTyT2A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Cart Tab styles -->
+    <style>
+        #aside_cartTab
+        {
+            position: fixed;
+            right: 0;
+            top: 50%;
+            margin-top: -64px;
+            border-radius: .25rem;
+        }
+
+        #cartTab
+        {
+            padding: 2em 1em;
+            text-align: center;
+        }
+    </style>
+    <!-- end Cart Tab styles -->
+
+    <script>
+
+        // shopping cart config on page load
+        /*
+        * ----------
+        * Initialize
+        *
+        * debug affects the checkout function. Set to true for on-page testing. Set to false to make the checkout button
+        * redirect the user to the checkout target URL
+        *
+        * checkout target url should be the base URL of where the browser will be forwarded (no params)
+        *
+        * funnelID come from CheckoutChamp CRM
+        *
+        * retainUrlParams passes incoming URL parameters to the checkout page
+        *
+        * suggested default cart status message is "You have 0 items in your cart"
+        *
+        * subtotal should be initialized to 0. i.e. user starts with no cost in cart
+        *
+        * coupon code and message are optional. If used both values must be text.
+        *
+        * totalQtyInCart is used to store/display the sum of all quantities of items in the cart
+        *
+        * ----------
+        * Cart Items
+        *
+        * keys must be unique. e.g. "Product1_PB" vs "Product1_HC". These labels are used in HTML attributes
+        *
+        * ids must be unique. e.g. the product ID in the CheckoutChamp CRM. These values are used in HTML attributes
+        *
+        * item name value should be unique
+        *
+        * item qty should be initialized to 0. i.e. user starts with no items in cart
+        *
+        * item's price value must be integer or decimal. Script handles formatting to display prices as USD in the Cart.
+        * HTML must be manually set up to match these values and formatting.
+        *
+        * imgSrc is the path to where the product image is hosted
+        *
+        * imgAlt is the alt text of that product's corresponding img element in the cart
+        *
+        * */
+        let Cart =
+            {
+                "debug": true,
+                // "debug": false,
+                "checkOutTarget": "https://secure-checkout.you-domain.com/",
+                "funnelID": "funnel-id", // e.g. "fid3-checkout"
+                "retainUrlParams": true,
+                "status": "You have 0 items in your cart",
+                "subtotal": 0,
+                "coupon": "TEST",
+                "couponMessage": "This is a test coupon",
+                "totalQtyInCart": 0,
+                "items":
+                    {
+                        "Product1_PB":
+                            {
+                                "id": 999,
+                                "name": "Product 1 Paperback",
+                                "qty": 0,
+                                "price": 85,
+                                "imgSrc": "images/imgPH1.png",
+                                "imgAlt": "product 1 paperback"
+                            },
+                        "Product1_HC":
+                            {
+                                "id": 998,
+                                "name": "Product 1 Hardcover",
+                                "qty": 0,
+                                "price": 100,
+                                "imgSrc": "images/imgPH1.png",
+                                "imgAlt": "product 1 hardcover"
+                            },
+                        "Product2":
+                            {
+                                "id": 876,
+                                "name": "Product 2",
+                                "qty": 0,
+                                "price": 200,
+                                "imgSrc": "images/imgPH2.png",
+                                "imgAlt": "product 2"
+                            },
+                        "Product3":
+                            {
+                                "id": 765,
+                                "name": "Product 3",
+                                "qty": 0,
+                                "price": 300,
+                                "imgSrc": "images/imgPH3.png",
+                                "imgAlt": "product 3"
+                            },
+                    }
+            };
+        // end shopping cart config on page load
+
+    </script>
+
+</head>
+<body>
+
+<section>
+
+    <div class="container">
+
+        <div class="row">
+
+            <!-- Products UI -->
+            <div class="col-12">
+
+                <div class="row m-3">
+                    <div class="col-6"><h2>Products</h2></div>
+                    <div class="col-6 text-end">
+                        <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight"><i class="fa-solid fa-cart-shopping" style="margin-right:.3em"></i> Cart</button>
+                    </div>
+                </div>
+
+                <!-- product 1 -->
+                <div class="row d-flex">
+                    <hr />
+
+                    <!-- col: product 1 image -->
+                    <div class="col-3 mb-3">
+                        <img src="images/imgPH1.png" alt="product 1 image" width="100%" />
+                    </div>
+                    <!-- end col: product 1 image -->
+
+                    <!-- col: product 1 details -->
+                    <div class="col-9 mb-3">
+
+                        <h3>Product 1</h3>
+                        <p>Lorem ipsum dolor sit amet.</p>
+                        <form action="">
+
+                            <!-- product 1 paperback -->
+                            <div class="form-check">
+                                <!-- input value needs to be the item's key name used in Cart JSON -->
+                                <input class="form-check-input" type="radio" name="radio_product1" value="Product1_PB" id="radio_product1_PB" checked>
+                                <label class="form-check-label" for="radio_product1_PB">
+                                    Paperback ($85)
+                                </label>
+                            </div>
+
+                            <!-- product 1 hardcover -->
+                            <div class="form-check">
+                                <!-- input value needs to be the item's key name used in Cart JSON -->
+                                <input class="form-check-input" type="radio" name="radio_product1" value="Product1_HC" id="radio_product1_HC">
+                                <label class="form-check-label" for="radio_product1_HC">
+                                    Hardcover ($100)
+                                </label>
+                            </div>
+
+                            <!-- string passed to addVariantToCart() needs to be name of radio group for this product -->
+                            <button id="btn_addProduct1" type="button" onclick="addVariantToCart('radio_product1')" class="btn btn-primary w-25 mb-3"><i class="fa-solid fa-cart-shopping" style="margin-right:.3em"></i> Add to cart</button>
+                        </form>
+
+                    </div>
+                    <!-- end col: product 1 details -->
+
+                    <hr />
+                </div>
+                <!-- end product 1 -->
+
+                <!-- product 2 -->
+                <div class="row d-flex">
+
+                    <!-- col: product 2 image -->
+                    <div class="col-3 mb-3">
+                        <img src="images/imgPH2.png" alt="product 2 image" width="100%" />
+                    </div>
+                    <!-- end col: product 2 image -->
+
+                    <!-- col: product 2 details -->
+                    <div class="col-9 mb-3">
+
+                        <h3>Product 2</h3>
+                        <p>Consectetur adipisicing elit. Aliquam cumque, error esse.</p>
+                        <p>$200.00</p>
+                        <!-- the text passed to addItemToCart() needs to match the item's key name used in Cart JSON -->
+                        <button id="btn_addProduct2" type="button" onclick="addItemToCart('Product2')" class="btn btn-primary w-25 mb-3"><i class="fa-solid fa-cart-shopping" style="margin-right:.3em"></i> Add to cart</button>
+
+                    </div>
+                    <!-- end col: product 2 details -->
+
+                    <hr />
+                </div>
+                <!-- end product 2 -->
+
+                <!-- product 3 -->
+                <div class="row d-flex">
+
+                    <!-- col: product 3 image -->
+                    <div class="col-3 mb-3">
+                        <img src="images/imgPH3.png" alt="product 3 image" width="100%" />
+                    </div>
+                    <!-- end col: product 3 image -->
+
+                    <!-- col: product 3 details -->
+                    <div class="col-9 mb-3">
+
+                        <h3>Product 3</h3>
+                        <p>Facere facilis fugiat, in iste omnis quam reiciendis reprehenderit voluptatem?</p>
+                        <p>$300.00</p>
+                        <!-- the text passed to addItemToCart() needs to match the item's key name used in Cart JSON -->
+                        <button id="btn_addProduct3" type="button" onclick="addItemToCart('Product3')" class="btn btn-primary w-25 mb-3"><i class="fa-solid fa-cart-shopping" style="margin-right:.3em"></i> Add to cart</button>
+
+                    </div>
+                    <!-- end col: product 3 details -->
+
+                    <hr />
+                </div>
+                <!-- end product 3 -->
+
+            </div>
+            <!-- end Products UI -->
+
+        </div>
+    </div>
+
+</section>
+
+<!-- offCanvas side panel -->
+<aside>
+    <div class="offcanvas offcanvas-end" data-bs-scroll="true" data-bs-backdrop="false" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
+        <div class="offcanvas-header">
+            <h5 id="offcanvasRightLabel">Cart</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <!-- Cart UI -->
+
+            <!-- cart status message -->
+            <p id="cartStatus"></p>
+
+            <!-- the shelf that displays in-cart items -->
+            <ul class="list-group" id="cartItems"></ul>
+
+            <!-- order financials -->
+            <div class="row mt-3">
+                <span id="couponMessage"></span>
+                <p><strong>Subtotal:</strong> <span id="subtotal"></span><br />
+                    Tax, shipping, and/or discounts will be calculated at checkout.</p>
+                <button onclick="checkout()" id="btn_checkout" type="button" class="btn btn-success mb-2">Checkout</button>
+                <button onclick="clearCart()" id="btn_clearCart" type="button" class="btn btn-secondary">Clear Cart</button>
+            </div>
+            <!-- end order financials -->
+
+            <!-- debug: checkout message -->
+            <div class="row mt-3">
+                <span id="checkOutMessage"></span>
+            </div>
+            <!-- end debug: checkout message -->
+            <!-- end Cart UI -->
+        </div>
+    </div>
+</aside>
+<!-- end offCanvas side panel -->
+
+<!-- cart tab -->
+<aside id="aside_cartTab" class="btn-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">
+    <div id="cartTab">
+        <p id="cartTab_qty">0</p>
+        <i class="fa-solid fa-cart-shopping"></i>
+    </div>
+</aside>
+<!-- end cart tab -->
+
+<script>
+
+    // ============
+    // on page load
+    $(document).ready(function(){
+
+        // ---------
+        // cart init
+
+        // write the default cart status message to the page
+        $("#cartStatus").text(Cart.status);
+
+        // write the default cart subtotal to the page
+        $("#subtotal").text(USD(Cart.subtotal));
+
+        // if Cart is using a coupon, write the configured coupon code and message to the page
+        if (Cart.coupon !== "")
+        {
+            $("#couponMessage").append("<p><strong>Coupon:</strong> " + Cart.coupon + " - " + Cart.couponMessage + "</p>");
+        }
+
+        // end cart init
+        // -------------
+
+        // -------------
+        // cart tab init
+
+        hideCartTab();
+
+        // end cart tab init
+        // -----------------
+
+    });
+    // end on page load
+    // ================
+
+
+    // ===========================
+    // fn: express a number in USD
+    // n - integer or decimal - the number that will be expressed as a price
+    function USD(n)
+    {
+        // currency formatter
+        let usd = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+
+            // These options are needed for rounding to whole numbers if that's what you want.
+            //minimumFractionDigits: 0, // (this suffices for whole numbers, but will print 2500.10 as $2,500.1)
+            //maximumFractionDigits: 0, // (causes 2500.99 to be printed as $2,501)
+        });
+        // end currency formatter
+
+        // return n as USD currency format
+        return usd.format(n);
+    }
+    // end fn USD
+    // ==========
+
+
+    // ==================================
+    // fn: get count of items in the cart
+    function getCountOfCartItems()
+    {
+        let cartItems = $("#cartItems li");
+        return cartItems.length;
+    }
+    // end fn getCountOfCartItems
+    // ==========================
+
+
+    // ============================================
+    // fn: calculate the total qty of items in cart
+    function countTotalQtyOfCartItems()
+    {
+        // variable to count with
+        let count = 0;
+
+        // count each item
+        for (const item in Cart.items)
+        {
+            count += Cart.items[item].qty;
+        }
+
+        // return the count
+        return count;
+
+    }
+    // end fn countTotalQtyOfCartItems
+    // ===============================
+
+
+    // ==================================
+    // fn: get total qty of items in cart
+    function getTotalQtyOfCartItems()
+    {
+        return Cart.totalQtyInCart;
+    }
+    // end fn getTotalQtyOfCartItems
+    // =============================
+
+
+    // ======================================
+    // fn: set the total qty of items in cart
+    function setTotalQtyOfCartItems(num)
+    {
+        Cart.totalQtyInCart = num;
+    }
+    // end fn setTotalQtyOfCartItems
+    // =============================
+
+
+    // =======================================================================
+    // fn: update cart status message based on how many items are on the shelf
+    function updateCartStatus()
+    {
+		// get updated cart status text
+		let updatedStatusText = "You have " + getTotalQtyOfCartItems() + " items in your cart";
+	
+        // assign updated text to UI and Cart
+        $("#cartStatus").text(updatedStatusText);
+		Cart.status = updatedStatusText;
+    }
+    // end fn updateCartStatus
+    // =======================
+
+
+    // ==========================
+    // fn: increase cart subtotal
+    // Product - JSON - the product that is being added to the shelf or having its quantity updated
+    function increaseSubtotal(Product)
+    {
+        Cart.subtotal += Product.price;
+        $("#subtotal").text(USD(Cart.subtotal));
+    }
+    // end fn increaseSubtotal
+    // =======================
+
+
+    // ==============================
+    // fn: place an item on the shelf
+    // Product - JSON - the product that will be added to the shelf
+    // shelf - JS object - reference to the HTML ul element that holds the shelf items
+    function placeItemOnShelf(Product, shelf)
+    {
+        // append list item to cart
+        let shelfItem =
+            "<li id=\"productRow_" + Product.id + "\" class=\"list-group-item container\"><div class=\"row\"><div class=\"col-3\"><img src=\"" + Product.imgSrc + "\" alt=\"" + Product.imgAlt + "\" width=\"100%\"></div><div class=\"col-6\"><p>" + Product.name + "</p>" + "<p>" + USD(Product.price) + "</p>" + "</div>" + "<div class=\"col-3\"><div class=\"input-group mb-3\"><input type=\"number\" name=\"qty_" + Product.id + "\" class=\"form-control\" value=\"1\" min=\"0\"><button id=\"btn_removeRow_" + Product.id + "\" class=\"btn btn-light btn-sm w-100\">Remove</button></div></div></div></li>";
+        shelf.append(shelfItem);
+
+        // update item qty
+        Product.qty++;
+
+        // update total qty in Cart
+        Cart.totalQtyInCart++;
+
+        // need to update subtotal
+        increaseSubtotal(Product);
+
+        // need to update cart status message
+        updateCartStatus()
+
+        // ----------------------------------------------
+        // bind functions to the shelf item we just added
+
+        // handle changes in product quantity
+        // remove item from shelf if qty is set to 0
+        $("input[name=qty_" + Product.id + "]").on("change", function()
+        {
+            handleQuantityChange(this, Product);
+        });
+
+        // handle button click to remove a row
+        $("#btn_removeRow_" + Product.id).on("click", function()
+        {
+            removeItemFromCart(Product);
+        });
+
+        // end bind functions to the shelf item we just added
+        // --------------------------------------------------
+
+        // update cart tab UI
+        cartTabUI();
+    }
+    // end fn placeItemOnShelf
+    // =======================
+
+
+    // ========================================================================
+    // fn: handle changes to the product quantity field of an item on the shelf
+    // thisInput - JS object - self reference to the input field that was changed
+    // Product - JSON - holds data that we need to make updates to
+    function handleQuantityChange(thisInput, Product)
+    {
+        // get the new qty
+        let newQty = parseInt($(thisInput).val());
+
+        // do not allow negative numbers in the Cart
+        if (newQty < 0) { newQty = 0; }
+
+        // ----------------------------------
+        // if qty was set to 0 or less than 0
+        // remove the item from the shelf
+        if (newQty === 0)
+        {
+            removeItemFromCart(Product);
+            cartTabUI();
+        }
+
+            // --------------------------------------
+        // else proceed to handle quantity change
+        else
+        {
+            // get the old qty from Cart JSON
+            let oldQty = Product.qty;
+
+            // get difference between quantities
+            let difference = newQty - oldQty;
+
+            // calculate dollar amount difference of quantities
+            let costDifference = Product.price * difference;
+
+            // set the new qty in the item's JSON
+            Product.qty = newQty;
+
+            // set the new total qty in Cart's JSON
+            setTotalQtyOfCartItems(countTotalQtyOfCartItems());
+
+            // update subtotal in Cart JSON
+            Cart.subtotal += costDifference;
+
+            // display new cart subtotal
+            $("#subtotal").text(USD(Cart.subtotal));
+
+            // update the cart status message
+            updateCartStatus();
+
+            // update the Cart tab UI
+            cartTabUI();
+        }
+
+    }
+    // end fn handleQuantityChange
+    // ===========================
+
+
+    // ====================================
+    // fn: add a single product to the cart
+    function addItemToCart(item)
+    {
+        // get item details from Cart.items
+        let Product = Cart.items[item];
+
+        // get html element that holds the shelf items
+        let shelf = $('#cartItems');
+
+        // ensure items in shelf are unique
+        // look for an existing shelf li with an id of "productRow_Product.id"
+        let hasRow = $("#productRow_" + Product.id);
+
+        // ---------------------------------------------------------------------------
+        // if the shelf already has a row for the product ID that we are trying to add
+        if (hasRow.length === 1)
+        {
+            // increase the displayed quantity for that row
+            let input = $("input[name=qty_" + Product.id + "]"); // get the input field element
+            let qty = parseInt(input.val()); // get the input field's value
+            qty++; // increment the value
+            input.val(qty); // set the new value to the input field
+
+            // increment the Product's qty in Cart JSON
+            Product.qty++;
+
+            // increment the total qty of items in the Cart
+            Cart.totalQtyInCart++;
+
+            // increase the cart subtotal
+            increaseSubtotal(Product);
+
+            // update the Cart status message
+            updateCartStatus();
+
+            // update the Cart tab UI
+            cartTabUI();
+
+        }
+
+        // --------------------------------
+        // else place the item on the shelf
+        else
+        {
+            placeItemOnShelf(Product, shelf);
+            cartTabUI();
+        }
+        // end ensure items in shelf are unique
+
+    }
+    // end fn addItemToCart
+    // ====================
+
+
+    // =============================================
+    // fn: add a product with variations to the cart
+    function addVariantToCart(radioName)
+    {
+        // get input from radio group
+        let selectedItem = $("input[name=" + radioName + "]:checked").val();
+
+        // add variant to the cart
+        addItemToCart(selectedItem);
+    }
+    // end fn addVariantToCart
+    // =======================
+
+
+    // =================================
+    // fn: clear all items from the cart
+    function clearCart()
+    {
+        // get the shelf that hold cart items
+        let cartShelf = $("#cartItems");
+
+        // get the items on the shelf
+        let cartItems = $("#cartItems li");
+
+        // slide the shelf items out of view
+        cartItems.fadeOut(800);
+
+        // wait for the animation before proceeding
+        setTimeout(function ()
+        {
+
+            // ---------------
+            // reset Cart JSON
+
+            // reset subtotal to 0
+            Cart.subtotal = 0;
+
+            // reset all product qty to 0
+            let productKeys = Object.keys(Cart.items);
+            productKeys.forEach(function(k){
+                Cart.items[k].qty = 0;
+            });
+
+            // reset total qty in Cart to 0
+            Cart.totalQtyInCart = 0;
+
+            // end reset Cart JSON
+            // -------------------
+
+            // remove all shelf items from page
+            cartShelf.empty();
+
+            // update subtotal displayed in Cart
+            $("#subtotal").text(USD(Cart.subtotal));
+
+            // update cart status message
+            updateCartStatus();
+
+            // update cart tab UI
+            $("#cartTab_qty").text("0");
+            hideCartTab();
+
+        }, 800);
+    }
+    // end function clearCart
+    // ======================
+
+
+    // =================================
+    // fn: remove an item from the shelf
+    function removeItemFromCart(Product)
+    {
+        // get the row from the cart
+        let shelfRow = $("li#productRow_" + Product.id);
+
+        // fade out the shelf row
+        shelfRow.fadeOut(800);
+
+        // wait for animation before proceeding
+        setTimeout(function ()
+        {
+
+            // remove the row from the cart
+            shelfRow.remove();
+
+            // get the old qty from Product
+            let oldQty = Product.qty;
+
+            // update the total qty of items in the Cart
+            let oldTotalQty = getTotalQtyOfCartItems();
+            setTotalQtyOfCartItems(oldTotalQty - oldQty);
+
+            // update the subtotal in Cart JSON
+            let costToRemove = oldQty * Product.price;
+            Cart.subtotal -= costToRemove;
+
+            // update the subtotal displayed on the page
+            $("#subtotal").text(USD(Cart.subtotal));
+
+            // update the qty in Cart JSON
+            Product.qty = 0;
+
+            // update cart status message
+            updateCartStatus();
+
+            // update cart tab UI
+            cartTabUI();
+
+        }, 800);
+
+    }
+    // end fn removeItemFromCart
+    // =========================
+
+
+    // ==========================
+    // fn: handle checkout button
+    function checkout()
+    {
+        // debug switch
+        switch (Cart.debug)
+        {
+            // ----------------------------------------
+            // debug is true. let's see what's going on
+            case true:
+                debug();
+                break;
+
+            // ------------------------------------------
+            // debug is false. send user to checkout page
+            case false:
+                handleCheckout();
+        }
+        // end debug switch
+    }
+    // end fn checkout
+    // ===============
+
+
+    // ==============
+    // fn: cart debug
+    function debug()
+    {
+        // write to the document
+        $("#checkOutMessage").append("<p>-- TEST --</p>");
+        $("#checkOutMessage").append("<p>Cart is in debug mode. See console for Cart details.</p>");
+        $("#checkOutMessage").append("<p>Target URL:  <a href='" + getURLToCheckoutPage() + "' target='_blank'>" + getURLToCheckoutPage() + "</a></p>");
+
+        console.log(Cart);
+    }
+    // end fn debug
+    // ============
+
+
+    // ==================================
+    // fn: redirect user to checkout page
+    function sendToCheckout()
+    {
+        window.location = getURLToCheckoutPage();
+    }
+    // end function sendToCheckout
+    // ===========================
+
+
+    // ================================================
+    // fn: get redirect URL based on Cart JSON settings
+    // see https://konnektive.atlassian.net/wiki/spaces/CC/pages/1859555013/Redirect+external+funnel+to+Checkout+Champ+Checkout
+    function getURLToCheckoutPage()
+    {
+        // build redirect parameters
+        let params = Cart.funnelID + "?products=";
+
+        // determine which products to include in checkout
+        let productKeys = Object.keys(Cart.items);
+        productKeys.forEach(function(k){
+            let product = Cart.items[k];
+            if (product.qty > 0)
+            {
+                // add "productID:quantity;" to url params
+                params += product.id + ":" + product.qty + ";";
+            }
+        });
+
+        // remove the unnecessary ";" from the last product that was added to the params
+        params = params.slice(0, -1);
+
+        // include coupon code if being used
+        if (Cart.coupon !== "")
+        {
+            params += "&couponCode=" + Cart.coupon;
+        }
+
+        // include incoming URL params if Cart.retainUrlParams is true
+        if (Cart.retainUrlParams === true)
+        {
+            let searchParams = window.location.search;
+            let correctedSearchParams = searchParams.replace("?", "&");
+            params += correctedSearchParams;
+        }
+
+        // return checkout URL
+        return Cart.checkOutTarget + params;
+    }
+    // end fn getLinkToCheckoutPage
+    // ============================
+
+
+    // =================================
+    // fn: checkout if cart is not empty
+    function handleCheckout()
+    {
+        // if Cart's subtotal is greater than 0
+        if (Cart.subtotal > 0)
+        {
+            // send user to check out page
+            sendToCheckout()
+        }
+
+        // else warn user that they must have products in their cart to check out
+        else
+        {
+            alert("You must have products in your cart to checkout.");
+        }
+    }
+    // end fn handleCheckout
+    // =====================
+
+
+    // =====================
+    // fn: show the cart tab
+    function showCartTab()
+    {
+        $("#aside_cartTab").fadeIn(500);
+    }
+    // end fn showCartTab
+    // ==================
+
+
+    // =====================
+    // fn: hide the cart tab
+    function hideCartTab()
+    {
+        $("#aside_cartTab").hide();
+    }
+    // end fn hideCartTab
+    // ==================
+
+
+    // ===============================
+    // fn: perform cart tab UI actions
+    function cartTabUI()
+    {
+        // get count of items in the cart
+        let numItemsInCart = getTotalQtyOfCartItems();
+
+        // if 0 items in cart
+        if (numItemsInCart === 0)
+        {
+            hideCartTab();
+        }
+        // else show cart tab and update cart tab items count
+        else
+        {
+            showCartTab();
+            $("#cartTab_qty").text(numItemsInCart);
+        }
+
+    }
+    // end function cartTabUI
+    // ======================
+
+</script>
+
+</body>
+</html>
